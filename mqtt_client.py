@@ -31,13 +31,10 @@ def on_log(client, userdata, level, buf):
     print(f"log: {buf}")
 
 # Define the callback function for message
-def on_message(client, userdata, msg):
-    print(f"Message received: Topic: {msg.topic}, Payload: {msg.payload.decode()}")
 
 # Assign the callback functions
 client.on_connect = on_connect
 client.on_log = on_log
-client.on_message = on_message
 
 # Connect to the broker
 try:

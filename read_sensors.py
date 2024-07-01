@@ -6,6 +6,7 @@ import adafruit_dht
 from datetime import datetime
 from wifi_connect import connect_to_wifi, disconnect_from_wifi
 from mqtt_client import publish_message  # Ensure mqtt_client.py is in the same directory
+import json
 
 # Configuration
 DHT_PIN = board.D4
@@ -90,7 +91,16 @@ def main_loop():
             # Check if AQI has changed
             if aqi != previous_aqi:
                 connect_to_wifi()  # Connect to WiFi
-                publish_message("notifications", f"AQI Level Changed: {aqi}")
+                message = {
+                    "message": f"AQI Level Changed: {aqi}",
+                    "data": {
+                        "temperature": temperature,
+                        "humidity": humidity,
+                        "PM25": pm2_5,
+                        "PM10": pm10
+                    }
+                }
+                publish_message("notifications", json.dumps(message))
                 #  disconnect_from_wifi()  # Disconnect from WiFi
                 previous_aqi = aqi
             
