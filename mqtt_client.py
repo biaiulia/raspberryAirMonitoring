@@ -57,8 +57,3 @@ def publish_message(topic, message):
     except Exception as e:
         print(f"Publish failed: {e}")
 
-# Example usage:
-if __name__ == "__main__":
-    publish_message("notifications", "Hello from Raspberry Pi")
-    client.loop_stop()
-    client.disconnect()

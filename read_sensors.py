@@ -1,7 +1,7 @@
 import time
 import sqlite3
 import board
-import serial
+import serial  
 import adafruit_dht
 from datetime import datetime
 from wifi_connect import connect_to_wifi, disconnect_from_wifi
@@ -12,6 +12,7 @@ DHT_PIN = board.D4
 UART_PORT = '/dev/ttyUSB0'
 UART_BAUDRATE = 9600
 READ_INTERVAL = 30  # seconds
+MAX_RETRIES = 3  # Number of retries for sensor reading
 
 # Initialize SQLite
 conn = sqlite3.connect('sensor_data.db')
@@ -61,19 +62,21 @@ def insert_into_db(temperature, humidity, pm2_5, pm10, aqi):
                      (day, temperature, humidity, pm2_5, pm10, aqi))
 
 def read_sensors():
-    try:
-        temperature = dhtDevice.temperature
-        humidity = dhtDevice.humidity
-        data = ser.read(10)
-        if len(data) == 10:
-            pm2_5 = int.from_bytes(data[2:4], byteorder='little') / 10
-            pm10 = int.from_bytes(data[4:6], byteorder='little') / 10
-        else:
-            pm2_5 = pm10 = None
-        return temperature, humidity, pm2_5, pm10
-    except Exception as e:
-        print(f"Error reading from a sensor: {e}")
-        return None, None, None, None
+    for attempt in range(MAX_RETRIES):
+        try:
+            temperature = dhtDevice.temperature
+            humidity = dhtDevice.humidity
+            data = ser.read(10)
+            if len(data) == 10:
+                pm2_5 = int.from_bytes(data[2:4], byteorder='little') / 10
+                pm10 = int.from_bytes(data[4:6], byteorder='little') / 10
+                return temperature, humidity, pm2_5, pm10
+            else:
+                print(f"Attempt {attempt+1}: Incomplete data received. Retrying...")
+        except Exception as e:
+            print(f"Attempt {attempt+1}: Error reading from sensor: {e}. Retrying...")
+        time.sleep(1)  
+    return None, None, None, None 
 
 def main_loop():
     previous_aqi = None
@@ -88,12 +91,12 @@ def main_loop():
             if aqi != previous_aqi:
                 connect_to_wifi()  # Connect to WiFi
                 publish_message("notifications", f"AQI Level Changed: {aqi}")
-                disconnect_from_wifi()  # Disconnect from WiFi
+                #  disconnect_from_wifi()  # Disconnect from WiFi
                 previous_aqi = aqi
             
             insert_into_db(temperature, humidity, pm2_5, pm10, aqi)
         else:
-            print("Incomplete data received, skipping database insertion.")
+            print("All attempts failed. Skipping database insertion.")
 
         time.sleep(READ_INTERVAL)
 
