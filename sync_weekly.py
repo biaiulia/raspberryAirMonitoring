@@ -4,10 +4,9 @@ from mqtt_client import publish_message
 import math
 from datetime import datetime, timedelta
 
-# SQLite Database
 DB_PATH = 'sensor_data.db'
 MQTT_TOPIC = 'pollution_data'  
-CHUNK_SIZE = 50  # Adjust the chunk size as needed
+CHUNK_SIZE = 50  # Max chunk size
 
 def fetch_data_from_db():
     conn = sqlite3.connect(DB_PATH)

@@ -5,7 +5,7 @@ import serial
 import adafruit_dht
 from datetime import datetime
 from wifi_connect import connect_to_wifi, disconnect_from_wifi
-from mqtt_client import publish_message  # Ensure mqtt_client.py is in the same directory
+from mqtt_client import publish_message  
 import json
 
 # Configuration
@@ -13,43 +13,45 @@ DHT_PIN = board.D4
 UART_PORT = '/dev/ttyUSB0'
 UART_BAUDRATE = 9600
 READ_INTERVAL = 30  # seconds
-MAX_RETRIES = 3  # Number of retries for sensor reading
 
-# Initialize SQLite
+MAX_RETRIES = 3  
+
 conn = sqlite3.connect('sensor_data.db')
 
-# Initialize Sensors
 dhtDevice = adafruit_dht.DHT22(DHT_PIN)
 ser = serial.Serial(UART_PORT, baudrate=UART_BAUDRATE, timeout=1)
 
-# AQI Levels
-AQI_LEVELS = ["Good", "Fair", "Moderate", "Poor", "Very Poor"]
+AQI_LEVELS = ["Good", "Fair", "Moderate", "Poor", "Very Poor", "Extremely Poor"]
 
 def calculate_aqi(pm2_5, pm10):
     if pm2_5 is None or pm10 is None:
         return None
     
-    if pm2_5 <= 25:
+    if pm2_5 <= 10:
         aqi_pm25 = "Good"
-    elif pm2_5 <= 50:
+    elif pm2_5 <= 20:
         aqi_pm25 = "Fair"
-    elif pm2_5 <= 90:
+    elif pm2_5 <= 25:
         aqi_pm25 = "Moderate"
-    elif pm2_5 <= 180:
+    elif pm2_5 <= 50:
         aqi_pm25 = "Poor"
-    else:
+    elif aqi_pm25 <=75:
         aqi_pm25 = "Very Poor"
-    
-    if pm10 <= 50:
-        aqi_pm10 = "Good"
-    elif pm10 <= 100:
-        aqi_pm10 = "Fair"
-    elif pm10 <= 250:
-        aqi_pm10 = "Moderate"
-    elif pm10 <= 350:
-        aqi_pm10 = "Poor"
     else:
+        aqi_pm25 = "Extremely Poor"
+    
+    if pm10 <= 20:
+        aqi_pm10 = "Good"
+    elif pm10 <= 40:
+        aqi_pm10 = "Fair"
+    elif pm10 <= 50:
+        aqi_pm10 = "Moderate"
+    elif pm10 <= 100:
+        aqi_pm10 = "Poor"
+    elif pm10 <= 150:
         aqi_pm10 = "Very Poor"
+    else:
+        aqi_pm10 = "Extremely Poor"
     
     aqi = max(aqi_pm25, aqi_pm10, key=lambda x: AQI_LEVELS.index(x))
     return aqi
@@ -92,12 +94,14 @@ def main_loop():
             if aqi != previous_aqi:
                 connect_to_wifi()  # Connect to WiFi
                 message = {
-                    "message": f"AQI Level Changed: {aqi}",
+                    "message": f"AQI Level Changed for sensor Edge Node Piata Libertatii: {aqi}",
                     "data": {
                         "temperature": temperature,
                         "humidity": humidity,
                         "PM25": pm2_5,
-                        "PM10": pm10
+                        "PM10": pm10,
+                        "aqiLevel": aqi.lower()
+                  
                     }
                 }
                 publish_message("notifications", json.dumps(message))
